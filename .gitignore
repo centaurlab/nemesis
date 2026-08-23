@@ -1,0 +1,7 @@
+node_modules/
+demo/.workdir/
+.nemesis/cache/
+.nemesis/reports/
+demo/sample-initial-report.json
+demo/sample-strengthened-report.json
+*.log

@@ -1,0 +1,6 @@
+[
+  {"id":"R1-C1","targetRequirementId":"R1","description":"Allow a normal team member to send an invitation.","find":"const ALLOW_MEMBERS_TO_INVITE = false;","replace":"const ALLOW_MEMBERS_TO_INVITE = true;"},
+  {"id":"R2-C1","targetRequirementId":"R2","description":"Expired invitations remain acceptable.","find":"const ENFORCE_EXPIRY = true;","replace":"const ENFORCE_EXPIRY = false;"},
+  {"id":"R3-C1","targetRequirementId":"R3","description":"Resending leaves the previous token valid.","find":"const INVALIDATE_OLD_ON_RESEND = true;","replace":"const INVALIDATE_OLD_ON_RESEND = false;"},
+  {"id":"R4-C1","targetRequirementId":"R4","description":"A replacement retains the original expiration timestamp.","find":"const RESET_EXPIRY_ON_RESEND = true;","replace":"const RESET_EXPIRY_ON_RESEND = false;"}
+]
