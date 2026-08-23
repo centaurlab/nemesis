@@ -10,6 +10,7 @@
     "ui:typecheck": "tsc --noEmit -p ui/tsconfig.json",
     "ui:build": "npm run ui:typecheck && vite build --config ui/vite.config.ts",
     "ui:preview": "vite preview --config ui/vite.config.ts",
+    "site:build": "npm run ui:build && tsx scripts/build-site.ts",
     "demo:reset": "tsx scripts/demo-reset.ts",
     "demo:verify": "tsx scripts/demo-verify.ts",
     "demo:strengthen": "tsx scripts/demo-strengthen.ts",
