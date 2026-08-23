@@ -17,6 +17,10 @@ const now = () => new Date().toISOString();
 const trace = (events: TraceEvent[], stage: string, message: string, status: TraceEvent["status"], requirementId?: string, counterfactualId?: string) => events.push({ timestamp: now(), stage, requirementId, counterfactualId, message, status });
 const observed = (tests: TestOutcome[], marker: string) => tests.find((test) => test.id.includes(marker))?.status === "passed";
 class InvalidChallenge extends Error { constructor(public readonly reason: string) { super(reason); } }
+const gapMessages: Record<string, string> = {
+  R2: "Your tests never exercise: \"accept an invitation after day 7\"",
+  R3: "Your tests never exercise: \"use the original token after resend\""
+};
 
 async function cachedChallenges(key: string, source: string): Promise<Counterfactual[]> {
   await fs.mkdir(CACHE_ROOT, { recursive: true });
@@ -96,6 +100,7 @@ export async function verify(reportName: "initial" | "strengthened", repo = DEMO
       const killed = stableRelevant.filter((test) => test.status === "failed").map((test) => test.id);
       result = {
         id: challenge.id, description: challenge.description, validity: "VALID", score: killed.length ? "KILLED" : "SURVIVED",
+        gapMessage: killed.length ? undefined : gapMessages[requirement.id],
         witness: { scenario: challenge.witness.scenario, expectedBehavior: challenge.witness.expectedBehavior, counterfactualBehavior: challenge.witness.counterfactualBehavior, confirmed: true },
         killedByTests: killed, stableRelevantTestsRun: stableRelevant.map((test) => test.id), stableUnrelatedTestsRun: stableUnrelated.map((test) => test.id)
       };
@@ -130,5 +135,5 @@ export async function verify(reportName: "initial" | "strengthened", repo = DEMO
 
 export function formatSummary(label: string, report: VerificationReport): string {
   const mark = (pass: boolean) => pass ? "✓" : "✕";
-  return [label.toUpperCase(), "", `${mark(report.summary.build === "PASS")} BUILD`, `${mark(report.summary.tests === "PASS")} TESTS`, `${mark(report.summary.proof === "PASS")} PROOF`, "", ...report.requirements.map((r) => `${r.id} ${r.verdict}`), "", `${report.summary.defended} / ${report.summary.totalRequirements} requirements defended`].join("\n");
+  return [label.toUpperCase(), "", `${mark(report.summary.build === "PASS")} BUILD`, `${mark(report.summary.tests === "PASS")} TESTS`, `${mark(report.summary.proof === "PASS")} PROOF`, "", ...report.requirements.map((r) => `${mark(r.verdict === "DEFENDED")} ${r.id} ${r.verdict}`), "", `${report.summary.defended} / ${report.summary.totalRequirements} requirements defended`].join("\n");
 }

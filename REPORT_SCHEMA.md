@@ -26,6 +26,7 @@ Each counterfactual records:
 - `witness.confirmed`, which is true only after the same harness demonstrates expected behavior on the true implementation and differing behavior on the adversarial implementation;
 - stable relevant and unrelated test identities actually run;
 - `killedByTests` for a killed challenge;
+- `gapMessage` for a survivor, mechanically phrased as the behavior the tests never exercise;
 - diagnostics for the distinct `witness-failed-on-true-implementation` path. `possibleImplementationViolation` is deliberately hedged and never means “proven bug.”
 
 ## Summary semantics

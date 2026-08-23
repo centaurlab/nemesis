@@ -3,7 +3,7 @@ import { z } from "zod";
 const status = z.enum(["RUNNING", "PASS", "FAIL", "INFO"]);
 const counterfactual = z.object({
   id: z.string(), description: z.string(), validity: z.enum(["VALID", "INVALID"]),
-  invalidReason: z.string().optional(), score: z.enum(["KILLED", "SURVIVED", "INVALID"]).optional(),
+  invalidReason: z.string().optional(), gapMessage: z.string().optional(), score: z.enum(["KILLED", "SURVIVED", "INVALID"]).optional(),
   witness: z.object({ scenario: z.string(), expectedBehavior: z.string(), counterfactualBehavior: z.string(), confirmed: z.boolean() }).optional(),
   diagnostics: z.object({ witnessFailedOnTrueImplementation: z.boolean().optional(), possibleImplementationViolation: z.boolean().optional() }).optional(),
   killedByTests: z.array(z.string()).optional(), stableRelevantTestsRun: z.array(z.string()).optional(), stableUnrelatedTestsRun: z.array(z.string()).optional()

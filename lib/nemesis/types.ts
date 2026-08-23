@@ -32,6 +32,7 @@ export type CounterfactualResult = {
   description: string;
   validity: "VALID" | "INVALID";
   invalidReason?: string;
+  gapMessage?: string;
   score?: ChallengeScore;
   witness?: {
     scenario: string;
