@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CounterfactualResult, TraceEvent, VerificationReport } from "../../lib/nemesis/types.js";
+import { VerificationReplay } from "./VerificationReplay.js";
 
-type Phase = "comfort" | "initial" | "strengthened";
+type Phase = "comfort" | "verifying" | "initial" | "strengthened";
 type LoadedReports = { initial: VerificationReport; strengthened: VerificationReport };
-const phasePath: Record<Phase, string> = { comfort: "/", initial: "/initial", strengthened: "/strengthened" };
+const phasePath: Record<Phase, string> = { comfort: "/", verifying: "/verifying", initial: "/initial", strengthened: "/strengthened" };
 
 function phaseFromPath(): Phase {
+  if (window.location.pathname === "/verifying") return "verifying";
   if (window.location.pathname === "/initial") return "initial";
   if (window.location.pathname === "/strengthened") return "strengthened";
   return "comfort";
@@ -41,8 +43,8 @@ export function App() {
     return () => window.removeEventListener("popstate", pop);
   }, []);
 
-  const navigate = (next: Phase) => {
-    window.history.pushState({}, "", phasePath[next]);
+  const navigate = (next: Phase, replace = false) => {
+    window.history[replace ? "replaceState" : "pushState"]({}, "", phasePath[next]);
     window.scrollTo({ top: 0, behavior: "smooth" });
     setPhase(next);
   };
@@ -53,7 +55,8 @@ export function App() {
   return (
     <div className="app-shell">
       <Header phase={phase} navigate={navigate} />
-      {phase === "comfort" && <FalseComfort report={reports.initial} onVerify={() => navigate("initial")} />}
+      {phase === "comfort" && <FalseComfort report={reports.initial} onVerify={() => navigate("verifying")} />}
+      {phase === "verifying" && <VerificationReplay report={reports.initial} onComplete={() => navigate("initial", true)} />}
       {phase === "initial" && <ReportView report={reports.initial} kind="initial" onNext={() => navigate("strengthened")} onReset={() => navigate("comfort")} />}
       {phase === "strengthened" && <ReportView report={reports.strengthened} kind="strengthened" initial={reports.initial} onReset={() => navigate("comfort")} />}
       <Footer report={phase === "strengthened" ? reports.strengthened : reports.initial} />
@@ -62,6 +65,7 @@ export function App() {
 }
 
 function Header({ phase, navigate }: { phase: Phase; navigate: (phase: Phase) => void }) {
+  const replaying = phase === "verifying";
   return (
     <header className="site-header">
       <button className="wordmark" onClick={() => navigate("comfort")} aria-label="Return to demo start">
@@ -69,10 +73,10 @@ function Header({ phase, navigate }: { phase: Phase; navigate: (phase: Phase) =>
       </button>
       <nav aria-label="Verification states">
         <button className={phase === "comfort" ? "active" : ""} onClick={() => navigate("comfort")}>Start</button>
-        <button className={phase === "initial" ? "active" : ""} onClick={() => navigate("initial")}>Initial</button>
-        <button className={phase === "strengthened" ? "active" : ""} onClick={() => navigate("strengthened")}>Verified</button>
+        <button className={phase === "initial" || replaying ? "active" : ""} disabled={replaying} onClick={() => navigate("initial")}>{replaying ? "Verifying…" : "Initial"}</button>
+        <button className={phase === "strengthened" ? "active" : ""} disabled={replaying} onClick={() => navigate("strengthened")}>Verified</button>
       </nav>
-      <div className="independent-pill"><span /> Independent verifier</div>
+      <div className={`independent-pill ${replaying ? "is-verifying" : ""}`}><span /> {replaying ? "Evidence replay" : "Independent verifier"}</div>
     </header>
   );
 }
