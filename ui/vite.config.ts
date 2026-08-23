@@ -1,11 +1,13 @@
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { loadVerificationReport, type ReportName } from "./server/report-loader.js";
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
 const reportsRoot = path.join(projectRoot, ".nemesis/reports");
+const sourceCommit = process.env.NEMESIS_SOURCE_COMMIT ?? execFileSync("git", ["rev-parse", "HEAD"], { cwd: projectRoot, encoding: "utf8" }).trim();
 
 function reportApi(): Plugin {
   const middleware = async (request: IncomingMessage, response: ServerResponse, next: () => void) => {
@@ -27,6 +29,7 @@ function reportApi(): Plugin {
 export default defineConfig({
   root: import.meta.dirname,
   plugins: [react(), reportApi()],
+  define: { __NEMESIS_SOURCE_COMMIT__: JSON.stringify(sourceCommit) },
   build: { outDir: path.join(projectRoot, "dist/ui"), emptyOutDir: true },
   server: { host: "127.0.0.1", port: 4173, strictPort: true, fs: { allow: [projectRoot] } },
   preview: { host: "127.0.0.1", port: 4173, strictPort: true }

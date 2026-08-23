@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CounterfactualResult, TraceEvent, VerificationReport } from "../../lib/nemesis/types.js";
 import { VerificationReplay } from "./VerificationReplay.js";
+import { requirementSourceLinks, sourceCommitUrl } from "./source-links.js";
 
 type Phase = "comfort" | "verifying" | "initial" | "strengthened";
 type LoadedReports = { initial: VerificationReport; strengthened: VerificationReport };
@@ -86,16 +87,16 @@ function FalseComfort({ report, onVerify }: { report: VerificationReport; onVeri
     <main className="comfort-page" data-testid="false-comfort">
       <div className="ambient-grid" />
       <section className="comfort-content">
-        <p className="eyebrow">CODEX · TASK COMPLETE</p>
-        <div className="completion-icon" aria-hidden="true">✓</div>
+        <p className="eyebrow">CODEX · IMPLEMENTATION COMPLETE</p>
+        <div className="agent-completion-icon" aria-hidden="true">C</div>
         <h1>Team invitations<br />implemented.</h1>
-        <p className="comfort-subtitle">The feature is built, typed, and tested. Everything looks ready to ship.</p>
+        <p className="comfort-subtitle">The agent reports success. Before merging, verify that the evidence proves the requirements.</p>
         <div className="completion-panel">
           <CompletionRow title="Build passed" detail="TypeScript · no errors" meta="PASS" />
           <CompletionRow title={`${report.baseline.totalTests} / ${report.baseline.totalTests} tests passing`} detail="Vitest · 0 flaky" meta="PASS" />
-          <div className="completion-row muted-row"><span className="status-icon commit">⌁</span><div><strong>Candidate committed</strong><small className="mono">{report.repo.candidateSha.slice(0, 12)}</small></div><span className="row-meta">READY</span></div>
+          <div className="completion-row muted-row"><span className="status-icon commit">⌁</span><div><strong>Candidate committed</strong><small className="mono">{report.repo.candidateSha.slice(0, 12)}</small></div><span className="row-meta neutral-meta">AWAITING VERIFICATION</span></div>
         </div>
-        <button className="primary-button" onClick={onVerify}>Verify independently <span>→</span></button>
+        <button className="primary-button challenge-button" onClick={onVerify}>Challenge the proof <span>→</span></button>
         <p className="button-note">Coding agents shouldn’t grade their own homework.</p>
       </section>
     </main>
@@ -120,7 +121,7 @@ function ReportView({ report, kind, initial, onNext, onReset }: { report: Verifi
       </section>
       <section className="requirements-section" aria-labelledby="requirements-heading">
         <div className="section-heading"><div><p className="section-kicker">REQUIREMENT-LEVEL PROOF</p><h2 id="requirements-heading">What the tests actually defend</h2></div><span className={`score-badge ${verified ? "all-defended" : "partial"}`}>{report.summary.defended} / {report.summary.totalRequirements}</span></div>
-        <div className="requirements-list">{report.requirements.map((requirement) => <RequirementRow key={requirement.id} requirement={requirement} />)}</div>
+        <div className="requirements-list">{report.requirements.map((requirement) => <RequirementRow key={requirement.id} requirement={requirement} strengthened={verified} />)}</div>
       </section>
       {verified && initial && <BeforeAfter initial={initial} strengthened={report} />}
       <ExecutionTrace trace={report.executionTrace} />
@@ -134,24 +135,35 @@ function TrustStrip({ report }: { report: VerificationReport }) {
   return <div className="trust-strip" aria-label="Build, tests, and proof status">{states.map((state) => { const pass = state.value === "PASS"; return <div className={pass ? "trust-pass" : "trust-fail"} key={state.label}><span>{pass ? "✓" : "✕"}</span><strong>{state.label}</strong><small>{state.value}</small></div>; })}</div>;
 }
 
-function RequirementRow({ requirement }: { requirement: VerificationReport["requirements"][number] }) {
+function RequirementRow({ requirement, strengthened }: { requirement: VerificationReport["requirements"][number]; strengthened: boolean }) {
   const defended = requirement.verdict === "DEFENDED";
   const counterfactual = requirement.counterfactuals[0];
   return (
     <details className={`requirement-row ${defended ? "defended" : "not-defended"}`} open={!defended}>
       <summary><span className="requirement-id">{requirement.id}</span><span className="requirement-copy"><strong>{requirement.text}</strong><small>{defended ? "Tests reject the confirmed adversarial implementation." : counterfactual.gapMessage}</small></span><span className="verdict"><i>{defended ? "✓" : "✕"}</i>{requirement.verdict.replace("_", " ")}</span><span className="chevron" aria-hidden="true">⌄</span></summary>
-      <EvidenceDrawer counterfactual={counterfactual} requirementText={requirement.text} />
+      <EvidenceDrawer counterfactual={counterfactual} requirementId={requirement.id} requirementText={requirement.text} strengthened={strengthened} />
     </details>
   );
 }
 
-function EvidenceDrawer({ counterfactual, requirementText }: { counterfactual: CounterfactualResult; requirementText: string }) {
+function EvidenceDrawer({ counterfactual, requirementId, requirementText, strengthened }: { counterfactual: CounterfactualResult; requirementId: string; requirementText: string; strengthened: boolean }) {
   return (
     <div className="evidence-drawer">
       {counterfactual.gapMessage && <blockquote>{counterfactual.gapMessage}</blockquote>}
       <div className="evidence-grid"><Evidence label="Requirement" value={requirementText} /><Evidence label="Adversarial implementation" value={counterfactual.description} /><Evidence label="Executable witness" value={counterfactual.witness?.scenario ?? "Witness unavailable"} /><Evidence label="Required behavior" value={counterfactual.witness?.expectedBehavior ?? "Not recorded"} tone="expected" /><Evidence label="Counterfactual behavior" value={counterfactual.witness?.counterfactualBehavior ?? "Not recorded"} tone="counter" /><Evidence label="Validity" value={`${counterfactual.validity} · Witness ${counterfactual.witness?.confirmed ? "confirmed" : "not confirmed"}`} tone="valid" /></div>
       <div className="test-evidence"><div><span>RESULT</span><strong className={counterfactual.score === "SURVIVED" ? "survived" : "killed"}>{counterfactual.score}</strong></div><div><span>STABLE RELEVANT TESTS RUN</span><strong>{counterfactual.stableRelevantTestsRun?.length ?? 0}</strong></div><div><span>STABLE UNRELATED TESTS RUN</span><strong>{counterfactual.stableUnrelatedTestsRun?.length ?? 0}</strong></div></div>
+      <SourceCodeLinks requirementId={requirementId} strengthened={strengthened} />
     </div>
+  );
+}
+
+function SourceCodeLinks({ requirementId, strengthened }: { requirementId: string; strengthened: boolean }) {
+  const links = requirementSourceLinks(requirementId, strengthened, __NEMESIS_SOURCE_COMMIT__);
+  return (
+    <section className="source-code-links" aria-label={`Source code for ${requirementId}`}>
+      <div className="source-links-heading"><div><span>VERIFY IN SOURCE</span><strong>Inspect the code behind this verdict</strong></div><a href={sourceCommitUrl(__NEMESIS_SOURCE_COMMIT__)} target="_blank" rel="noreferrer">Commit <code>{__NEMESIS_SOURCE_COMMIT__.slice(0, 7)}</code> ↗</a></div>
+      <div className="source-links-grid">{links.map((link) => <a href={link.url} key={`${link.path}-${link.lines}`} target="_blank" rel="noreferrer" aria-label={`${link.label}: ${link.file}`}><span>{link.label}<i>↗</i></span><code>{link.file} · {link.lines.replace("L", "lines ").replace("-L", "–")}</code></a>)}</div>
+    </section>
   );
 }
 
