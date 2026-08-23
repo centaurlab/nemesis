@@ -5,3 +5,4 @@ demo/.workdir/
 demo/sample-initial-report.json
 demo/sample-strengthened-report.json
 *.log
+.DS_Store
