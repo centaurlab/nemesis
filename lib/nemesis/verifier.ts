@@ -97,6 +97,7 @@ export async function verify(reportName: "initial" | "strengthened", repo = DEMO
       const relevant = await runVitest(cfDir, relevantFiles);
       if (relevant.tests.length === 0) throw new InvalidChallenge("test-harness");
       const stableRelevant = stableOutcomes(relevant.tests, stable);
+      if (stableRelevant.length === 0) throw new InvalidChallenge("no-stable-relevant-tests");
       const killed = stableRelevant.filter((test) => test.status === "failed").map((test) => test.id);
       result = {
         id: challenge.id, description: challenge.description, validity: "VALID", score: killed.length ? "KILLED" : "SURVIVED",
