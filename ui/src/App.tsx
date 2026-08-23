@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CounterfactualResult, TraceEvent, VerificationReport } from "../../lib/nemesis/types.js";
 import { VerificationReplay } from "./VerificationReplay.js";
+import { StrengtheningReplay } from "./StrengtheningReplay.js";
 import { requirementSourceLinks, sourceCommitUrl } from "./source-links.js";
 
-type Phase = "comfort" | "verifying" | "initial" | "strengthened";
+type Phase = "comfort" | "verifying" | "initial" | "strengthening" | "strengthened";
 type LoadedReports = { initial: VerificationReport; strengthened: VerificationReport };
-const phasePath: Record<Phase, string> = { comfort: "/", verifying: "/verifying", initial: "/initial", strengthened: "/strengthened" };
+const phasePath: Record<Phase, string> = { comfort: "/", verifying: "/verifying", initial: "/initial", strengthening: "/strengthening", strengthened: "/strengthened" };
 
 function phaseFromPath(): Phase {
   if (window.location.pathname === "/verifying") return "verifying";
   if (window.location.pathname === "/initial") return "initial";
+  if (window.location.pathname === "/strengthening") return "strengthening";
   if (window.location.pathname === "/strengthened") return "strengthened";
   return "comfort";
 }
@@ -58,15 +60,18 @@ export function App() {
       <Header phase={phase} navigate={navigate} />
       {phase === "comfort" && <FalseComfort report={reports.initial} onVerify={() => navigate("verifying")} />}
       {phase === "verifying" && <VerificationReplay report={reports.initial} onComplete={() => navigate("initial", true)} />}
-      {phase === "initial" && <ReportView report={reports.initial} kind="initial" onNext={() => navigate("strengthened")} onReset={() => navigate("comfort")} />}
+      {phase === "initial" && <ReportView report={reports.initial} kind="initial" onNext={() => navigate("strengthening")} onReset={() => navigate("comfort")} />}
+      {phase === "strengthening" && <StrengtheningReplay initial={reports.initial} strengthened={reports.strengthened} onComplete={() => navigate("strengthened", true)} />}
       {phase === "strengthened" && <ReportView report={reports.strengthened} kind="strengthened" initial={reports.initial} onReset={() => navigate("comfort")} />}
-      <Footer report={phase === "strengthened" ? reports.strengthened : reports.initial} />
+      <Footer report={phase === "strengthened" || phase === "strengthening" ? reports.strengthened : reports.initial} />
     </div>
   );
 }
 
 function Header({ phase, navigate }: { phase: Phase; navigate: (phase: Phase) => void }) {
-  const replaying = phase === "verifying";
+  const verifying = phase === "verifying";
+  const strengthening = phase === "strengthening";
+  const transitioning = verifying || strengthening;
   return (
     <header className="site-header">
       <button className="wordmark" onClick={() => navigate("comfort")} aria-label="Return to demo start">
@@ -74,10 +79,10 @@ function Header({ phase, navigate }: { phase: Phase; navigate: (phase: Phase) =>
       </button>
       <nav aria-label="Verification states">
         <button className={phase === "comfort" ? "active" : ""} onClick={() => navigate("comfort")}>Start</button>
-        <button className={phase === "initial" || replaying ? "active" : ""} disabled={replaying} onClick={() => navigate("initial")}>{replaying ? "Verifying…" : "Initial"}</button>
-        <button className={phase === "strengthened" ? "active" : ""} disabled={replaying} onClick={() => navigate("strengthened")}>Verified</button>
+        <button className={phase === "initial" || verifying ? "active" : ""} disabled={transitioning} onClick={() => navigate("initial")}>{verifying ? "Verifying…" : "Initial"}</button>
+        <button className={phase === "strengthened" || strengthening ? "active" : ""} disabled={transitioning} onClick={() => navigate("strengthened")}>{strengthening ? "Strengthening…" : "Verified"}</button>
       </nav>
-      <div className={`independent-pill ${replaying ? "is-verifying" : ""}`}><span /> {replaying ? "Evidence replay" : "Independent verifier"}</div>
+      <div className={`independent-pill ${transitioning ? "is-verifying" : ""}`}><span /> {verifying ? "Evidence replay" : strengthening ? "Proof strengthening" : "Independent verifier"}</div>
     </header>
   );
 }
@@ -125,7 +130,7 @@ function ReportView({ report, kind, initial, onNext, onReset }: { report: Verifi
       </section>
       {verified && initial && <BeforeAfter initial={initial} strengthened={report} />}
       <ExecutionTrace trace={report.executionTrace} />
-      <section className="report-actions">{!verified && onNext && <button className="primary-button" onClick={onNext}>View strengthened proof <span>→</span></button>}<button className="secondary-button" onClick={onReset}>Reset demo</button></section>
+      <section className="report-actions">{!verified && onNext && <button className="primary-button" onClick={onNext}>Strengthen verification <span>→</span></button>}<button className="secondary-button" onClick={onReset}>Reset demo</button></section>
     </main>
   );
 }
