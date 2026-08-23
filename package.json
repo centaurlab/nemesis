@@ -6,18 +6,28 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest --run",
+    "ui:dev": "vite --config ui/vite.config.ts",
+    "ui:typecheck": "tsc --noEmit -p ui/tsconfig.json",
+    "ui:build": "npm run ui:typecheck && vite build --config ui/vite.config.ts",
+    "ui:preview": "vite preview --config ui/vite.config.ts",
     "demo:reset": "tsx scripts/demo-reset.ts",
     "demo:verify": "tsx scripts/demo-verify.ts",
     "demo:strengthen": "tsx scripts/demo-strengthen.ts",
     "demo:all": "npm run demo:reset && npm run demo:verify && npm run demo:strengthen"
   },
   "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@vitejs/plugin-react": "^4.3.4",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
+    "vite": "^5.4.21",
     "vitest": "^2.1.8"
   }
 }
